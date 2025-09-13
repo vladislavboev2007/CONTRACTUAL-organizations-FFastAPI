@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>METANIT.COM</title>
+    <style>
+        td {padding:5px;}
+        button {margin: 5px;}
+    </style>
+</head>
+<body>
+    <h2>Список договоров</h2>
+    <div>
+        <input type="hidden" id="actCode" />
+        <p>
+            Название:<br/>
+            <input id="actName" />
+        </p>
+        <p>
+            Трудоемкость:<br />
+            <input id="actLabor" type="number" />
+        </p>
+        <p>
+            ФИО сотрудника:<br/>
+            <input id="actEmployeeName" />
+        </p>
+        <p>
+            Должность:<br />
+            <input id="actPost"/>
+        </p>
+        <p>
+            Дата выдачи поручения на работу:<br/>
+            <input id="actIssueDate" type="date"/>
+        </p>
+        <p>
+            Дата окончания работы:<br />
+            <input id="actFinalDate" type="date"/>
+        </p>
+         <p>
+            <button id="saveBtn">Сохранить</button>
+            <button id="resetBtn">Сбросить</button>
+        </p>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Шифр документа</th>
+                <th>Имя</th>
+                <th>Трудоемкость</th>
+                <th>ФИО сотрудника</th>
+                <th>Должность</th>
+                <th>Дата выдачи поручения на работу</th>
+                <th>Дата окончания работы</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+    // Получение всех контрактов
+    async function getUsers() {
+        const response = await fetch("/api/contracts", {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+
+        if (response.ok === true) {
+            const users = await response.json();
+            const rows = document.querySelector("tbody");
+            rows.innerHTML = "";
+            users.forEach(user => rows.append(row(user)));
+        }
+    }
+
+    // Получение одного контракта по шифру
+    async function getUser(code) {
+        const response = await fetch(`/api/contracts/${code}`, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+
+        if (response.ok === true) {
+            const user = await response.json();
+            document.getElementById("actCode").value = user.code;
+            document.getElementById("actName").value = user.name;
+            document.getElementById("actLabor").value = user.labor;
+            document.getElementById("actEmployeeName").value = user.employeeName;
+            document.getElementById("actPost").value = user.post;
+            document.getElementById("actIssueDate").value = user.issueDate;
+            document.getElementById("actFinalDate").value = user.finalDate;
+        } else {
+            const error = await response.json();
+            console.log(error.message);
+        }
+    }
+
+    // Добавление контракта
+    async function createUser(actName, actLabor, actEmployeeName, actPost, actIssueDate, actFinalDate) {
+        const response = await fetch("/api/contracts", {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                name: actName,
+                labor: parseInt(actLabor, 10),
+                employeeName: actEmployeeName,
+                post: actPost,
+                issueDate: actIssueDate,
+                finalDate: actFinalDate
+            })
+        });
+
+        if (response.ok === true) {
+            const user = await response.json();
+            reset();
+            getUsers(); // Обновляем список
+        } else {
+            const error = await response.json();
+            console.log(error.message);
+        }
+    }
+
+    // Изменение контракта
+    async function editUser(actCode, actName, actLabor, actEmployeeName, actPost, actIssueDate, actFinalDate) {
+        const response = await fetch("/api/contracts", {
+            method: "PUT",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                code: actCode,
+                name: actName,
+                labor: parseInt(actLabor, 10),
+                employeeName: actEmployeeName,
+                post: actPost,
+                issueDate: actIssueDate,
+                finalDate: actFinalDate
+            })
+        });
+
+        if (response.ok === true) {
+            const user = await response.json();
+            reset();
+            getUsers(); // Обновляем список
+        } else {
+            const error = await response.json();
+            console.log(error.message);
+        }
+    }
+
+    // Удаление контракта по шифру
+    async function deleteUser(code) {
+        if (!confirm("Вы уверены, что хотите удалить эту запись?")) return;
+
+        const response = await fetch(`/api/contracts/${code}`, {
+            method: "DELETE",
+            headers: { "Accept": "application/json" }
+        });
+
+        if (response.ok === true) {
+            // Удаляем строку из таблицы
+            const row = document.querySelector(`tr[data-rowcode="${code}"]`);
+            if (row) row.remove();
+        } else {
+            const error = await response.json();
+            console.log(error.message);
+        }
+    }
+
+    // Сброс данных формы
+    function reset() {
+        document.getElementById("actCode").value = "";
+        document.getElementById("actName").value = "";
+        document.getElementById("actLabor").value = "";
+        document.getElementById("actEmployeeName").value = "";
+        document.getElementById("actPost").value = "";
+        document.getElementById("actIssueDate").value = "";
+        document.getElementById("actFinalDate").value = "";
+    }
+
+    // Создание строки для таблицы
+    function row(user) {
+        const tr = document.createElement("tr");
+        tr.setAttribute("data-rowcode", user.code);
+
+        // Ячейка с шифром документа
+        const codeTd = document.createElement("td");
+        codeTd.append(user.code);
+        tr.append(codeTd);
+
+        const nameTd = document.createElement("td");
+        nameTd.append(user.name);
+        tr.append(nameTd);
+
+        const laborTd = document.createElement("td");
+        laborTd.append(user.labor);
+        tr.append(laborTd);
+
+        const employeeNameTd = document.createElement("td");
+        employeeNameTd.append(user.employeeName);
+        tr.append(employeeNameTd);
+
+        const postTd = document.createElement("td");
+        postTd.append(user.post);
+        tr.append(postTd);
+
+        const issueDateTd = document.createElement("td");
+        issueDateTd.append(user.issueDate);
+        tr.append(issueDateTd);
+
+        const finalDateTd = document.createElement("td");
+        finalDateTd.append(user.finalDate);
+        tr.append(finalDateTd);
+
+        const linksTd = document.createElement("td");
+
+        const editLink = document.createElement("button");
+        editLink.append("Изменить");
+        editLink.addEventListener("click", async () => await getUser(user.code));
+        linksTd.append(editLink);
+
+        const removeLink = document.createElement("button");
+        removeLink.append("Удалить");
+        removeLink.addEventListener("click", async () => await deleteUser(user.code));
+        linksTd.append(removeLink);
+
+        tr.appendChild(linksTd);
+
+        return tr;
+    }
+
+    // Сброс значений формы
+    document.getElementById("resetBtn").addEventListener("click", () => reset());
+
+    // Отправка формы
+    document.getElementById("saveBtn").addEventListener("click", async () => {
+        const code = document.getElementById("actCode").value;
+        const name = document.getElementById("actName").value;
+        const labor = document.getElementById("actLabor").value;
+        const employeeName = document.getElementById("actEmployeeName").value;
+        const post = document.getElementById("actPost").value;
+        const issueDate = document.getElementById("actIssueDate").value;
+        const finalDate = document.getElementById("actFinalDate").value;
+
+        if (code === "") {
+            await createUser(name, labor, employeeName, post, issueDate, finalDate);
+        } else {
+            await editUser(code, name, labor, employeeName, post, issueDate, finalDate);
+        }
+    });
+
+    // Загрузка контрактов
+    getUsers();
+    </script>
+</body>
+</html>
